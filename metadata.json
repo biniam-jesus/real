@@ -1,0 +1,6 @@
+{
+  "name": "Shega Bites Management System",
+  "description": "Full-stack style POS, ingredient stock tracking, recipe cost analysis, and sales reporting system for Shega Bites, Shega Kitchen, and Shega Traditional.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
