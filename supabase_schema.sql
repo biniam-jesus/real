@@ -14,15 +14,7 @@ CREATE TABLE IF NOT EXISTS shega_employees (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Seed starting default restaurant roster for immediate logging-in and testing
-INSERT INTO shega_employees (id, username, pin, role, branch) VALUES
-('emp-1', 'Shegawan Admin', '1234', 'Admin', 'Shegawan'),
-('emp-2', 'Chef Aster', '2222', 'Chef', 'Shegawan'),
-('emp-3', 'Waiter Biniam', '3333', 'Waiter', 'Shegawan'),
-('emp-4', 'Teyim Admin', '1234', 'Admin', 'Teyim Shega'),
-('emp-5', 'Waiter Almaz', '3333', 'Waiter', 'Teyim Shega')
-ON CONFLICT (id) DO UPDATE
-SET username = EXCLUDED.username, pin = EXCLUDED.pin, role = EXCLUDED.role, branch = EXCLUDED.branch;
+-- No demo employee accounts are pre-seeded; create them through the app or Supabase auth as needed.
 
 
 -- 2. Create table for ingredients inventory tracking

@@ -6,7 +6,7 @@
 import { useState, FormEvent, useEffect } from 'react';
 import { AuthUser, UserRole } from '../types';
 import { useLanguage } from '../lib/translations';
-import { UtensilsCrossed, Sparkles, Mail, Key, User, Plus, X, Laptop, Shield, UserCheck, LogIn, HelpCircle } from 'lucide-react';
+import { UtensilsCrossed, Mail, Key, User, Plus, X, Laptop, Shield, UserCheck, LogIn, HelpCircle } from 'lucide-react';
 import { isSupabaseConfigured, supabaseSync, supabase } from '../lib/supabase';
 
 interface LoginScreenProps {
@@ -31,28 +31,6 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
 
   // Interactive Forgot Password Helper
   const [showForgotTip, setShowForgotTip] = useState<boolean>(false);
-
-  // Pre-seed local storage with dummy demonstration accounts so testing is smooth out-of-the-box
-  useEffect(() => {
-    const dummyKey = 'shega_local_users';
-    const existing = localStorage.getItem(dummyKey);
-    if (!existing) {
-      const demoUsers = [
-        { email: 'admin@shega.com', password: '123456', username: 'Super Admin', role: 'Admin', branch: 'Shegawan' },
-        { email: 'chef@shega.com', password: '123456', username: 'Head Chef Aster', role: 'Chef', branch: 'Shegawan' },
-        { email: 'waiter@shega.com', password: '123456', username: 'Waiter Biniam', role: 'Waiter', branch: 'Shegawan' },
-      ];
-      localStorage.setItem(dummyKey, JSON.stringify(demoUsers));
-    }
-  }, []);
-
-  // One-click quick login handler for demo comfort
-  const handleQuickDemoClick = (demoEmail: string) => {
-    setEmail(demoEmail);
-    setPassword('123456');
-    setErrorMsg('');
-    setSuccessMsg('Selected demo credentials populated!');
-  };
 
   const handleEmailSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -80,7 +58,7 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
         );
 
         if (!found) {
-          setErrorMsg('Invalid email address or incorrect password. Please register or try admin@shega.com');
+          setErrorMsg('Invalid email address or incorrect password. Please register a new account or use your own credentials.');
           return;
         }
 
@@ -433,7 +411,7 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
                   </button>
                   {showForgotTip && (
                     <div className="mt-2 text-[11px] text-neutral-500 bg-neutral-50 p-2.5 rounded-lg border border-neutral-100 text-left leading-relaxed">
-                      💡 Sandbox accounts use password <span className="font-bold text-neutral-700">123456</span>. If you registered a production password, please try it or create an additional test account.
+                      💡 If you created a local account, use that password. Otherwise create a new account to continue.
                     </div>
                   )}
                 </div>
@@ -458,29 +436,6 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
                 </div>
 
               </form>
-            </div>
-
-            {/* QUICK ONE-CLICK ACCESS DRAWER (Super comforting for rapid user evaluations!) */}
-            <div className="bg-white px-5 py-4 rounded-xl border border-neutral-200/80 shadow-md">
-              <span className="text-[10px] uppercase font-black tracking-widest text-neutral-400 block mb-2.5 flex items-center gap-1.5 justify-center">
-                <Sparkles className="w-3.5 h-3.5 text-amber-500" /> Demo Quick Access Accounts
-              </span>
-              <div className="grid grid-cols-3 gap-2">
-                {[
-                  { label: 'Login Admin', email: 'admin@shega.com', bg: 'bg-amber-50 hover:bg-amber-100/80 border-amber-200/60 text-amber-800' },
-                  { label: 'Login Chef', email: 'chef@shega.com', bg: 'bg-indigo-50 hover:bg-indigo-100/80 border-indigo-200/60 text-indigo-800' },
-                  { label: 'Login Waiter', email: 'waiter@shega.com', bg: 'bg-emerald-50 hover:bg-emerald-100/80 border-emerald-200/60 text-emerald-800' }
-                ].map((item, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => handleQuickDemoClick(item.email)}
-                    className={`px-2 py-2.5 rounded-lg border text-[10px] font-black cursor-pointer leading-tight text-center transition-all ${item.bg}`}
-                  >
-                    {item.label}
-                  </button>
-                ))}
-              </div>
             </div>
 
             {/* Display database connection info context for transparency */}

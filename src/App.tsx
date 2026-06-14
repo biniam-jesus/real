@@ -10,7 +10,7 @@ import {
   INITIAL_TABLES, 
   INITIAL_DISHES 
 } from './data/menu';
-import { generateSeedOrders, deductIngredientsForOrder } from './utils/helpers';
+import { deductIngredientsForOrder } from './utils/helpers';
 import PosDashboard from './components/PosDashboard';
 import RecipeStockDashboard from './components/RecipeStockDashboard';
 import KitchenDashboard from './components/KitchenDashboard';
@@ -56,35 +56,7 @@ export default function App() {
     if (cachedAudits) {
       return JSON.parse(cachedAudits);
     }
-    return [
-      {
-        id: 'seed_audit_1',
-        timestamp: new Date(Date.now() - 3600000 * 2).toISOString(),
-        actorName: 'System',
-        actorRole: 'Admin',
-        action: 'System Bootstrapped',
-        details: 'Initial database seeds and ingredients sync completed for branch Shegawan.',
-        branch: 'Shegawan'
-      },
-      {
-        id: 'seed_audit_2',
-        timestamp: new Date(Date.now() - 360000 * 15).toISOString(),
-        actorName: 'Abdi',
-        actorRole: 'Waiter',
-        action: 'Order #1001 Taken',
-        details: 'Order initialized for Table "Table 1" containing 2x Special Burger. Total: 280 Br.',
-        branch: 'Shegawan'
-      },
-      {
-        id: 'seed_audit_3',
-        timestamp: new Date(Date.now() - 360000 * 5).toISOString(),
-        actorName: 'Chef Mary',
-        actorRole: 'Chef',
-        action: 'Stock Restock: Cheese',
-        details: 'Restocked Cheese by +3.0kg. Current level: 5.0kg.',
-        branch: 'Shegawan'
-      }
-    ];
+    return [];
   });
 
   const addAuditLog = (action: string, details: string) => {
@@ -183,38 +155,37 @@ export default function App() {
         setOrders(parsedOrders);
         setInventoryLogs(parsedLogs);
       } else {
-        // Seed branch-specific data independently for both
-        const seedingShg = generateSeedOrders(INITIAL_DISHES, INITIAL_INGREDIENTS.map(i => ({ ...i, branch: 'Shegawan' as const })), 'Shegawan');
-        const seedingTym = generateSeedOrders(INITIAL_DISHES, INITIAL_INGREDIENTS.map(i => ({ ...i, branch: 'Teyim Shega' as const })), 'Teyim Shega');
-        
-        const combinedIngredients = [...seedingShg.updatedIngredients, ...seedingTym.updatedIngredients];
-        const combinedOrders = [...seedingShg.seededOrders, ...seedingTym.seededOrders];
-        const combinedLogs = [...seedingShg.seededLogs, ...seedingTym.seededLogs];
-        
+        const combinedIngredients = [
+          ...INITIAL_INGREDIENTS.map(i => ({ ...i, branch: 'Shegawan' as const })),
+          ...INITIAL_INGREDIENTS.map(i => ({ ...i, branch: 'Teyim Shega' as const }))
+        ];
         const combinedTables = [
           ...INITIAL_TABLES.map(t => ({ ...t, id: `shg_${t.id}`, branch: 'Shegawan' as const })),
           ...INITIAL_TABLES.map(t => ({ ...t, id: `tym_${t.id}`, branch: 'Teyim Shega' as const }))
         ];
+        const emptyOrders: Order[] = [];
+        const emptyLogs: InventoryLog[] = [];
 
         setIngredients(combinedIngredients);
         setDishes(INITIAL_DISHES);
         setTables(combinedTables);
-        setOrders(combinedOrders);
-        setInventoryLogs(combinedLogs);
+        setOrders(emptyOrders);
+        setInventoryLogs(emptyLogs);
+        setAuditLogs([]);
 
-        // State storage cache
         localStorage.setItem('shega_ingredients', JSON.stringify(combinedIngredients));
         localStorage.setItem('shega_dishes', JSON.stringify(INITIAL_DISHES));
         localStorage.setItem('shega_tables', JSON.stringify(combinedTables));
-        localStorage.setItem('shega_orders', JSON.stringify(combinedOrders));
-        localStorage.setItem('shega_inventory_logs', JSON.stringify(combinedLogs));
+        localStorage.setItem('shega_orders', JSON.stringify(emptyOrders));
+        localStorage.setItem('shega_inventory_logs', JSON.stringify(emptyLogs));
+        localStorage.setItem('shega_audit_logs', JSON.stringify([]));
 
         if (isSupabaseConfigured()) {
           supabaseSync.saveIngredients(combinedIngredients);
           supabaseSync.saveDishes(INITIAL_DISHES);
           supabaseSync.saveTables(combinedTables);
-          supabaseSync.saveAllOrders(combinedOrders);
-          supabaseSync.saveAllInventoryLogs(combinedLogs);
+          supabaseSync.saveAllOrders(emptyOrders);
+          supabaseSync.saveAllInventoryLogs(emptyLogs);
         }
       }
     }
@@ -271,15 +242,11 @@ export default function App() {
 
   // RESET SYSTEM CONTROL
   const handleResetSystemData = () => {
-    if (window.confirm("Are you sure you want to reset all inventory quantities, order records, and reports to fresh factory seeds?")) {
-      localStorage.clear();
-      const seedingShg = generateSeedOrders(INITIAL_DISHES, INITIAL_INGREDIENTS.map(i => ({ ...i, branch: 'Shegawan' as const })), 'Shegawan');
-      const seedingTym = generateSeedOrders(INITIAL_DISHES, INITIAL_INGREDIENTS.map(i => ({ ...i, branch: 'Teyim Shega' as const })), 'Teyim Shega');
-      
-      const combinedIngredients = [...seedingShg.updatedIngredients, ...seedingTym.updatedIngredients];
-      const combinedOrders = [...seedingShg.seededOrders, ...seedingTym.seededOrders];
-      const combinedLogs = [...seedingShg.seededLogs, ...seedingTym.seededLogs];
-      
+    if (window.confirm("Are you sure you want to clear current orders, inventory activity, and reports and start with a clean workspace?")) {
+      const combinedIngredients = [
+        ...INITIAL_INGREDIENTS.map(i => ({ ...i, branch: 'Shegawan' as const })),
+        ...INITIAL_INGREDIENTS.map(i => ({ ...i, branch: 'Teyim Shega' as const }))
+      ];
       const combinedTables = [
         ...INITIAL_TABLES.map(t => ({ ...t, id: `shg_${t.id}`, branch: 'Shegawan' as const })),
         ...INITIAL_TABLES.map(t => ({ ...t, id: `tym_${t.id}`, branch: 'Teyim Shega' as const }))
@@ -288,8 +255,24 @@ export default function App() {
       setIngredients(combinedIngredients);
       setDishes(INITIAL_DISHES);
       setTables(combinedTables);
-      setOrders(combinedOrders);
-      setInventoryLogs(combinedLogs);
+      setOrders([]);
+      setInventoryLogs([]);
+      setAuditLogs([]);
+
+      localStorage.setItem('shega_ingredients', JSON.stringify(combinedIngredients));
+      localStorage.setItem('shega_dishes', JSON.stringify(INITIAL_DISHES));
+      localStorage.setItem('shega_tables', JSON.stringify(combinedTables));
+      localStorage.setItem('shega_orders', JSON.stringify([]));
+      localStorage.setItem('shega_inventory_logs', JSON.stringify([]));
+      localStorage.setItem('shega_audit_logs', JSON.stringify([]));
+
+      if (isSupabaseConfigured()) {
+        supabaseSync.saveIngredients(combinedIngredients);
+        supabaseSync.saveDishes(INITIAL_DISHES);
+        supabaseSync.saveTables(combinedTables);
+        supabaseSync.saveAllOrders([]);
+        supabaseSync.saveAllInventoryLogs([]);
+      }
       
       if (user?.role === 'Chef') {
         setActiveTab('Kitchen');
