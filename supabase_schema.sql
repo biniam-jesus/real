@@ -8,9 +8,9 @@
 CREATE TABLE IF NOT EXISTS shega_employees (
   id TEXT PRIMARY KEY,
   username TEXT NOT NULL,
-  pin TEXT NOT NULL,                     -- 4-digit POS numerical passcodes (e.g., '1234')
-  role TEXT NOT NULL DEFAULT 'Waiter',    -- 'Admin' | 'Chef' | 'Waiter'
-  branch TEXT NOT NULL DEFAULT 'Shegawan', -- 'Shegawan' | 'Teyim Shega'
+  pin TEXT NOT NULL,
+  role TEXT NOT NULL DEFAULT 'Waiter',
+  branch TEXT NOT NULL DEFAULT 'Shegawan',
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -21,7 +21,7 @@ INSERT INTO shega_employees (id, username, pin, role, branch) VALUES
 ('emp-3', 'Waiter Biniam', '3333', 'Waiter', 'Shegawan'),
 ('emp-4', 'Teyim Admin', '1234', 'Admin', 'Teyim Shega'),
 ('emp-5', 'Waiter Almaz', '3333', 'Waiter', 'Teyim Shega')
-ON CONFLICT (id) DO UPDATE 
+ON CONFLICT (id) DO UPDATE
 SET username = EXCLUDED.username, pin = EXCLUDED.pin, role = EXCLUDED.role, branch = EXCLUDED.branch;
 
 
@@ -29,9 +29,9 @@ SET username = EXCLUDED.username, pin = EXCLUDED.pin, role = EXCLUDED.role, bran
 CREATE TABLE IF NOT EXISTS shega_ingredients (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
-  unit TEXT NOT NULL,                  -- e.g. 'g', 'ml', 'pcs', 'slice'
+  unit TEXT NOT NULL,
   stock NUMERIC NOT NULL DEFAULT 0,
-  "minStock" NUMERIC NOT NULL DEFAULT 5, -- Minimum safety stock trigger
+  "minStock" NUMERIC NOT NULL DEFAULT 5,
   "costPerUnit" NUMERIC NOT NULL DEFAULT 0,
   branch TEXT NOT NULL DEFAULT 'Shegawan',
   created_at TIMESTAMPTZ DEFAULT NOW()
@@ -46,8 +46,8 @@ CREATE TABLE IF NOT EXISTS shega_dishes (
   subcategory TEXT NOT NULL,
   description TEXT,
   "basePrice" NUMERIC NOT NULL DEFAULT 0,
-  variants JSONB,                       -- Array of variants: e.g. [{"name": "Double", "price": 120}]
-  recipe JSONB NOT NULL DEFAULT '[]'::jsonb, -- Array of recipe requirements: [{"ingredientId": "ing-1", "quantity": 150}]
+  variants JSONB,
+  recipe JSONB NOT NULL DEFAULT '[]'::jsonb,
   yield NUMERIC DEFAULT 1,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -57,7 +57,7 @@ CREATE TABLE IF NOT EXISTS shega_dishes (
 CREATE TABLE IF NOT EXISTS shega_tables (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
-  status TEXT NOT NULL DEFAULT 'Empty', -- 'Empty' | 'Occupied' | 'Unclean'
+  status TEXT NOT NULL DEFAULT 'Empty',
   "currentOrderId" TEXT,
   branch TEXT NOT NULL DEFAULT 'Shegawan',
   created_at TIMESTAMPTZ DEFAULT NOW()
@@ -70,9 +70,9 @@ CREATE TABLE IF NOT EXISTS shega_orders (
   "orderNumber" INT NOT NULL,
   "tableId" TEXT NOT NULL,
   "tableName" TEXT NOT NULL,
-  items JSONB NOT NULL,                 -- Array of order items: [{"dishId": "...", "dishName": "...", "quantity": 2, "price": 140}]
+  items JSONB NOT NULL,
   total NUMERIC NOT NULL,
-  status TEXT NOT NULL DEFAULT 'Pending', -- 'Pending' | 'Preparing' | 'Ready' | 'Served' | 'Cancelled'
+  status TEXT NOT NULL DEFAULT 'Pending',
   "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   "servedAt" TIMESTAMPTZ,
   branch TEXT NOT NULL DEFAULT 'Shegawan',
@@ -88,10 +88,10 @@ CREATE TABLE IF NOT EXISTS shega_inventory_logs (
   id TEXT PRIMARY KEY,
   "ingredientId" TEXT NOT NULL,
   "ingredientName" TEXT NOT NULL,
-  "amountChanged" NUMERIC NOT NULL,       -- Positive for restocks, negative for recipe cooking consumption
-  type TEXT NOT NULL DEFAULT 'Adjustment', -- 'Deduction' | 'Adjustment' | 'Restock'
+  "amountChanged" NUMERIC NOT NULL,
+  type TEXT NOT NULL DEFAULT 'Adjustment',
   timestamp TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  reference TEXT,                       -- Order receipt ID or adjustment description
+  reference TEXT,
   branch TEXT NOT NULL DEFAULT 'Shegawan',
   "actorName" TEXT,
   "actorRole" TEXT,
@@ -99,7 +99,7 @@ CREATE TABLE IF NOT EXISTS shega_inventory_logs (
 );
 
 
--- Disable RLS or turn on Permissive Anonymous Access for Easy POS terminals offline syncing:
+-- Enable RLS
 ALTER TABLE shega_employees ENABLE ROW LEVEL SECURITY;
 ALTER TABLE shega_ingredients ENABLE ROW LEVEL SECURITY;
 ALTER TABLE shega_dishes ENABLE ROW LEVEL SECURITY;
@@ -107,28 +107,96 @@ ALTER TABLE shega_tables ENABLE ROW LEVEL SECURITY;
 ALTER TABLE shega_orders ENABLE ROW LEVEL SECURITY;
 ALTER TABLE shega_inventory_logs ENABLE ROW LEVEL SECURITY;
 
--- Create Open Public Access policies so all regional tablet terminals read and write data flawlessly without complex headers:
-CREATE POLICY "Public Read Access shega_employees" ON shega_employees FOR SELECT USING (true);
-CREATE POLICY "Public Insert Access shega_employees" ON shega_employees FOR INSERT WITH CHECK (true);
-CREATE POLICY "Public Update Access shega_employees" ON shega_employees FOR UPDATE USING (true);
 
-CREATE POLICY "Public Read Access shega_ingredients" ON shega_ingredients FOR SELECT USING (true);
-CREATE POLICY "Public Insert Access shega_ingredients" ON shega_ingredients FOR INSERT WITH CHECK (true);
-CREATE POLICY "Public Update Access shega_ingredients" ON shega_ingredients FOR UPDATE USING (true);
+-- =========================================================
+-- RLS POLICIES (drop first, then recreate => idempotent)
+-- =========================================================
 
-CREATE POLICY "Public Read Access shega_dishes" ON shega_dishes FOR SELECT USING (true);
-CREATE POLICY "Public Insert Access shega_dishes" ON shega_dishes FOR INSERT WITH CHECK (true);
-CREATE POLICY "Public Update Access shega_dishes" ON shega_dishes FOR UPDATE USING (true);
+-- shega_employees
+DROP POLICY IF EXISTS "Public Read Access shega_employees" ON shega_employees;
+DROP POLICY IF EXISTS "Public Insert Access shega_employees" ON shega_employees;
+DROP POLICY IF EXISTS "Public Update Access shega_employees" ON shega_employees;
 
-CREATE POLICY "Public Read Access shega_tables" ON shega_tables FOR SELECT USING (true);
-CREATE POLICY "Public Insert Access shega_tables" ON shega_tables FOR INSERT WITH CHECK (true);
-CREATE POLICY "Public Update Access shega_tables" ON shega_tables FOR UPDATE USING (true);
+CREATE POLICY "Public Read Access shega_employees"
+ON shega_employees FOR SELECT USING (true);
 
-CREATE POLICY "Public Read Access shega_orders" ON shega_orders FOR SELECT USING (true);
-CREATE POLICY "Public Insert Access shega_orders" ON shega_orders FOR INSERT WITH CHECK (true);
-CREATE POLICY "Public Update Access shega_orders" ON shega_orders FOR UPDATE USING (true);
+CREATE POLICY "Public Insert Access shega_employees"
+ON shega_employees FOR INSERT WITH CHECK (true);
 
-CREATE POLICY "Public Read Access shega_inventory_logs" ON shega_inventory_logs FOR SELECT USING (true);
-CREATE POLICY "Public Insert Access shega_inventory_logs" ON shega_inventory_logs FOR INSERT WITH CHECK (true);
-CREATE POLICY "Public Update Access shega_inventory_logs" ON shega_inventory_logs FOR UPDATE USING (true);
+CREATE POLICY "Public Update Access shega_employees"
+ON shega_employees FOR UPDATE USING (true);
 
+
+-- shega_ingredients
+DROP POLICY IF EXISTS "Public Read Access shega_ingredients" ON shega_ingredients;
+DROP POLICY IF EXISTS "Public Insert Access shega_ingredients" ON shega_ingredients;
+DROP POLICY IF EXISTS "Public Update Access shega_ingredients" ON shega_ingredients;
+
+CREATE POLICY "Public Read Access shega_ingredients"
+ON shega_ingredients FOR SELECT USING (true);
+
+CREATE POLICY "Public Insert Access shega_ingredients"
+ON shega_ingredients FOR INSERT WITH CHECK (true);
+
+CREATE POLICY "Public Update Access shega_ingredients"
+ON shega_ingredients FOR UPDATE USING (true);
+
+
+-- shega_dishes
+DROP POLICY IF EXISTS "Public Read Access shega_dishes" ON shega_dishes;
+DROP POLICY IF EXISTS "Public Insert Access shega_dishes" ON shega_dishes;
+DROP POLICY IF EXISTS "Public Update Access shega_dishes" ON shega_dishes;
+
+CREATE POLICY "Public Read Access shega_dishes"
+ON shega_dishes FOR SELECT USING (true);
+
+CREATE POLICY "Public Insert Access shega_dishes"
+ON shega_dishes FOR INSERT WITH CHECK (true);
+
+CREATE POLICY "Public Update Access shega_dishes"
+ON shega_dishes FOR UPDATE USING (true);
+
+
+-- shega_tables
+DROP POLICY IF EXISTS "Public Read Access shega_tables" ON shega_tables;
+DROP POLICY IF EXISTS "Public Insert Access shega_tables" ON shega_tables;
+DROP POLICY IF EXISTS "Public Update Access shega_tables" ON shega_tables;
+
+CREATE POLICY "Public Read Access shega_tables"
+ON shega_tables FOR SELECT USING (true);
+
+CREATE POLICY "Public Insert Access shega_tables"
+ON shega_tables FOR INSERT WITH CHECK (true);
+
+CREATE POLICY "Public Update Access shega_tables"
+ON shega_tables FOR UPDATE USING (true);
+
+
+-- shega_orders
+DROP POLICY IF EXISTS "Public Read Access shega_orders" ON shega_orders;
+DROP POLICY IF EXISTS "Public Insert Access shega_orders" ON shega_orders;
+DROP POLICY IF EXISTS "Public Update Access shega_orders" ON shega_orders;
+
+CREATE POLICY "Public Read Access shega_orders"
+ON shega_orders FOR SELECT USING (true);
+
+CREATE POLICY "Public Insert Access shega_orders"
+ON shega_orders FOR INSERT WITH CHECK (true);
+
+CREATE POLICY "Public Update Access shega_orders"
+ON shega_orders FOR UPDATE USING (true);
+
+
+-- shega_inventory_logs
+DROP POLICY IF EXISTS "Public Read Access shega_inventory_logs" ON shega_inventory_logs;
+DROP POLICY IF EXISTS "Public Insert Access shega_inventory_logs" ON shega_inventory_logs;
+DROP POLICY IF EXISTS "Public Update Access shega_inventory_logs" ON shega_inventory_logs;
+
+CREATE POLICY "Public Read Access shega_inventory_logs"
+ON shega_inventory_logs FOR SELECT USING (true);
+
+CREATE POLICY "Public Insert Access shega_inventory_logs"
+ON shega_inventory_logs FOR INSERT WITH CHECK (true);
+
+CREATE POLICY "Public Update Access shega_inventory_logs"
+ON shega_inventory_logs FOR UPDATE USING (true);
